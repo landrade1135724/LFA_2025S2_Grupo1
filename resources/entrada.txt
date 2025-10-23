@@ -1,1 +1,5 @@
-Hola
+SUMA(2, 3, 4)
+POTENCIA(2, 3)
+RAIZ(9, 2)
+INVERSO(5)
+MOD(10, 4)
