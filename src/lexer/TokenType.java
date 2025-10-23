@@ -1,13 +1,19 @@
 package lexer;
 
 public enum TokenType {
-    // Palabras reservadas
-    SUMA, RESTA, MULTIPLICACION, DIVISION, POTENCIA, RAIZ, INVERSO, MOD,
-    // Símbolos
-    LPAREN, RPAREN, COMMA,
+    // Etiquetas tipo XML simplificado
+    OPERACION_OPEN,     // <Operacion= SUMA>  (lexeme = "SUMA"/"RESTA"/...)
+    OPERACION_CLOSE,    // </Operacion>
+    NUMERO_OPEN,        // <Numero>
+    NUMERO_CLOSE,       // </Numero>
+    P_OPEN,             // <P>
+    P_CLOSE,            // </P>
+    R_OPEN,             // <R>
+    R_CLOSE,            // </R>
+
     // Literales
     NUMBER,
+
     // Utilitarios
-    WS, // (no se devuelve al usuario)
     ERROR, EOF
 }
