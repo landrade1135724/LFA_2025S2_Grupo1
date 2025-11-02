@@ -1,19 +1,27 @@
 package lexer;
 
 public enum TokenType {
-    // Etiquetas tipo XML simplificado
-    OPERACION_OPEN,     // <Operacion= SUMA>  (lexeme = "SUMA"/"RESTA"/...)
-    OPERACION_CLOSE,    // </Operacion>
-    NUMERO_OPEN,        // <Numero>
-    NUMERO_CLOSE,       // </Numero>
-    P_OPEN,             // <P>
-    P_CLOSE,            // </P>
-    R_OPEN,             // <R>
-    R_CLOSE,            // </R>
+    ETIQUETACIERRE,     // "</"
+    ETIQUETAAPRETURA,   // "<" 
+    CIERREETIQUETA,     // ">"
 
-    // Literales
-    NUMBER,
+    ABRIROPERACION,     // "<Operacion="
+    CERRAROPERACION,    // "</Operacion>"
 
-    // Utilitarios
-    ERROR, EOF
+    ABRIRONUMERO,       // "<Numero>"
+    CERRARNUMERO,       // "</Numero>"
+
+    ABRIRO_P,           // "<P>"
+    CERRAR_P,           // "</P>"
+
+    ABRIRO_R,           // "<R>"
+    CERRAR_R,           // "</R>"
+
+    TipoOperacion,      // SUMA | RESTA | DIVISION | MULTIPLICACION | POTENCIA | RAIZ | INVERSA | MOD (+ INVERSO)
+
+    ESPACIO,            // [\t\r\n ]+
+    NUMERO,             // [0-9]+(\.[0-9]+)?
+
+    EOF,
+    ERROR               // cualquier cosa no reconocida
 }

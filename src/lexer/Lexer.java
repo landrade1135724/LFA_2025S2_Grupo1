@@ -55,7 +55,7 @@ public class Lexer {
 
     // Lee una palabra de operación (SUMA, RESTA, ...)
     private String readOpWord() {
-        return readWhile(Lexer::isAZ); // Enunciado usa MAYÚSCULAS
+        return readWhile(Lexer::isAZ); // el enunciado usa MAYÚSCULAS
     }
 
     private Token makeErrorToken(String bad, int sl, int sc) {
@@ -96,7 +96,8 @@ public class Lexer {
                 return makeErrorToken("Falta '>' en <Operacion= " + op + ">", sl, sc);
             }
             advance(); // '>'
-            return new Token(TokenType.OPERACION_OPEN, op, sl, sc);
+            // ===== CAMBIO: usar nuevos TokenType =====
+            return new Token(TokenType.ABRIROPERACION, op, sl, sc);
         } else {
             // Debe venir '>' inmediatamente (o tras espacios si cierre)
             skipWS();
@@ -107,20 +108,20 @@ public class Lexer {
 
             if ("Operacion".equals(tag)) {
                 return closing
-                        ? new Token(TokenType.OPERACION_CLOSE, "</Operacion>", sl, sc)
+                        ? new Token(TokenType.CERRAROPERACION, "</Operacion>", sl, sc)
                         : makeErrorToken("<Operacion> de apertura requiere '= OP'", sl, sc);
             } else if ("Numero".equals(tag)) {
                 return closing
-                        ? new Token(TokenType.NUMERO_CLOSE, "</Numero>", sl, sc)
-                        : new Token(TokenType.NUMERO_OPEN, "<Numero>", sl, sc);
+                        ? new Token(TokenType.CERRARNUMERO, "</Numero>", sl, sc)
+                        : new Token(TokenType.ABRIRONUMERO, "<Numero>", sl, sc);
             } else if ("P".equals(tag)) {
                 return closing
-                        ? new Token(TokenType.P_CLOSE, "</P>", sl, sc)
-                        : new Token(TokenType.P_OPEN, "<P>", sl, sc);
+                        ? new Token(TokenType.CERRAR_P, "</P>", sl, sc)
+                        : new Token(TokenType.ABRIRO_P, "<P>", sl, sc);
             } else if ("R".equals(tag)) {
                 return closing
-                        ? new Token(TokenType.R_CLOSE, "</R>", sl, sc)
-                        : new Token(TokenType.R_OPEN, "<R>", sl, sc);
+                        ? new Token(TokenType.CERRAR_R, "</R>", sl, sc)
+                        : new Token(TokenType.ABRIRO_R, "<R>", sl, sc);
             } else {
                 return makeErrorToken("Etiqueta no reconocida: " + tag, sl, sc);
             }
@@ -144,7 +145,8 @@ public class Lexer {
             sb.append(readWhile(Lexer::isDigit));
         }
 
-        return new Token(TokenType.NUMBER, sb.toString(), sl, sc);
+        // ===== CAMBIO: usar NUMERO (nuevo enum) =====
+        return new Token(TokenType.NUMERO, sb.toString(), sl, sc);
     }
 
     public Token next() {
