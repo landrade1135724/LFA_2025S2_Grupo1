@@ -15,7 +15,7 @@ public class Main {
         Lexer lx = new Lexer(src);
 
         List<String> outTokens = new ArrayList<>();
-        List<String> outErrors = new ArrayList<>();
+        List<String> outErrorsLex = new ArrayList<>();
         List<Token> tokensParaParser = new ArrayList<>();
 
         // === 2. Lexer ===
@@ -29,31 +29,30 @@ public class Main {
             } else {
                 String e = "LEXERROR '" + t.lexeme + "' @ " + t.line + ":" + t.column;
                 System.out.println(e);
-                outErrors.add(e);
+                outErrorsLex.add(e);
             }
         }
         for (Lexer.LexError e : lx.errores) {
             String s = "LEXERROR '" + e.lexema + "' @ " + e.line + ":" + e.col;
-            if (!outErrors.contains(s)) outErrors.add(s);
+            if (!outErrorsLex.contains(s)) outErrorsLex.add(s);
         }
 
-        // === 3. Guardar tokens/errores ===
+        // === 3. Guardar tokens/errores léxicos ===
         Files.createDirectories(Path.of("out"));
         Files.write(Path.of("out", "tokens.txt"), outTokens);
-        Files.write(Path.of("out", "errores.txt"), outErrors);
+        Files.write(Path.of("out", "errores.txt"), outErrorsLex);
 
-        // === 4. Parser + evaluación (texto) ===
+        // === 4. Reporte de texto (no tolerante, solo informativo) ===
         String reporte = Analizar.ejecutar(tokensParaParser);
         Files.writeString(Path.of("out", "resultados.txt"), reporte);
+        System.out.println("\n=== RESULTADOS ===\n" + reporte);
 
-        System.out.println("\n=== RESULTADOS ===");
-        System.out.println(reporte);
+        // === 5. USAR MODO TOLERANTE: ASTs válidos + errores de parseo acumulados ===
+        Analizar.ParseBatch batch = Analizar.parsearArbolesTolerante(tokensParaParser);
+        List<OperacionResultado> resultados = Analizar.analizarTolerante(tokensParaParser);
+        var arboles = batch.arboles;
 
-        // === 5. Resultados estructurados + ASTs (UNA sola declaración de 'arboles') ===
-        List<OperacionResultado> resultados = Analizar.analizar(tokensParaParser);
-        var arboles = Analizar.parsearArboles(tokensParaParser);
-
-        // === 6. Árboles .dot/.png ===
+        // === 6. Árboles .dot/.png solo para ASTs válidos ===
         for (int i = 0; i < arboles.size(); i++) {
             Path dot = Path.of("out", "arbol_" + (i + 1) + ".dot");
             Path png = Path.of("out", "arbol_" + (i + 1) + ".png");
@@ -64,9 +63,12 @@ public class Main {
             }
         }
 
-        // === 7. HTML bonito (usa AST) + Errores HTML ===
+        // === 7. HTML bonito (usa AST) + ERRORES combinados (léxicos + sintácticos) ===
         HtmlReport.generarResultados(resultados, arboles, Path.of("out", "Resultados.html"));
-        HtmlReport.generarErrores(outErrors, Path.of("out", "ERRORES_Grupo1.html"), "Grupo1");
+
+        List<String> erroresTotales = new ArrayList<>(outErrorsLex); // léxicos
+        erroresTotales.addAll(batch.errores);                        // sintácticos
+        HtmlReport.generarErrores(erroresTotales, Path.of("out", "ERRORES_Grupo1.html"), "Grupo1");
 
         System.out.println("\nOK -> Generado out/Resultados.html, out/ERRORES_Grupo1.html y arbol_#.dot/.png");
 
