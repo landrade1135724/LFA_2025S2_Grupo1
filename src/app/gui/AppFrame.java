@@ -109,11 +109,17 @@ public class AppFrame extends JFrame {
         miManUsuario.addActionListener(e -> abrirEnNavegador(Path.of("docs", "Manual_Usuario.pdf")));
         JMenuItem miManTecnico = new JMenuItem("Manual Técnico (PDF)");
         miManTecnico.addActionListener(e -> abrirEnNavegador(Path.of("docs", "Manual_Tecnico.pdf")));
+        JMenuItem miDiaClases = new JMenuItem("Diagrama de Clases (PDF)");
+        miDiaClases.addActionListener(e -> abrirEnNavegador(Path.of("docs", "Diagrama_Clases.pdf")));
+        JMenuItem miMapUI = new JMenuItem("Mapa de UI (jpeg)");
+        miMapUI.addActionListener(e -> abrirEnNavegador(Path.of("docs", "Mapa_UI.jpeg")));
         JMenuItem miAcerca = new JMenuItem("Acerca de...");
         miAcerca.addActionListener(e -> mostrarAcerca());
 
         mAyuda.add(miManUsuario);
         mAyuda.add(miManTecnico);
+        mAyuda.add(miDiaClases);
+        mAyuda.add(miMapUI);
         mAyuda.addSeparator();
         mAyuda.add(miAcerca);
 
