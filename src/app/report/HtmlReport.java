@@ -34,7 +34,11 @@ public final class HtmlReport {
         """;
     }
 
-    public static void generarResultados(List<OperacionResultado> ops, Path destinoHtml) throws IOException {
+    // NUEVO: versión “bonita” que usa los AST para mostrar notación infija y galería
+    public static void generarResultados(java.util.List<OperacionResultado> ops,
+            java.util.List<ast.Node> arboles,
+            java.nio.file.Path destinoHtml) throws java.io.IOException {
+        // --- tabla (igual que la versión actual) ---
         StringBuilder rows = new StringBuilder();
         for (OperacionResultado r : ops) {
             String estado = r.ok ? "<span class='pill ok'>OK</span>" : "<span class='pill err'>ERROR</span>";
@@ -49,18 +53,39 @@ public final class HtmlReport {
                     .append("</tr>\n");
         }
 
-        // Galería: como el HTML se guarda en /out, basta referenciar arbol_#.png relativo.
+        // --- lista infija bonita usando ASTs ---
+        StringBuilder infix = new StringBuilder();
+        infix.append("<ol style='padding-left:20px;'>");
+        for (int i = 0; i < arboles.size(); i++) {
+            var n = arboles.get(i);
+            String expr = InfixPretty.render(n);
+
+            // buscar el valor correspondiente (mismo índice i en ops)
+            String valor = "";
+            if (i < ops.size() && ops.get(i).ok) {
+                valor = " = <b>" + ops.get(i).valor + "</b>";
+            } else if (i < ops.size() && !ops.get(i).ok) {
+                valor = " → <b style='color:var(--err)'>" + escape(ops.get(i).error) + "</b>";
+            }
+
+            infix.append("<li><div class='card' style='background:#0b1220'>")
+                    .append("<div class='mono'><b>").append(escape(expr)).append("</b>").append(valor).append("</div>")
+                    .append("</div></li>");
+        }
+        infix.append("</ol>");
+
+        // --- galería de diagramas ---
         StringBuilder gal = new StringBuilder();
-        gal.append("<div class='sub'>Imágenes del árbol (si existen):</div>")
-                .append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;'>");
-        for (int i = 1; i <= ops.size(); i++) {
-            Path png = Path.of("out", "arbol_" + i + ".png");
-            if (Files.exists(png)) {
+        gal.append("<div class='sub'>Diagramas de Operaciones</div>")
+                .append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;'>");
+        for (int i = 1; i <= arboles.size(); i++) {
+            java.nio.file.Path png = java.nio.file.Path.of("out", "arbol_" + i + ".png");
+            if (java.nio.file.Files.exists(png)) {
                 gal.append("""
               <a href="arbol_%d.png" target="_blank" style="text-decoration:none;">
                 <div class="card" style="padding:8px;">
                   <div class="sub" style="margin:0 0 8px 0;">arbol_%d.png</div>
-                  <img src="arbol_%d.png" alt="arbol_%d" style="width:100%%;height:140px;object-fit:contain;background:#0b1220;border-radius:10px;">
+                  <img src="arbol_%d.png" alt="arbol_%d" style="width:100%%;height:160px;object-fit:contain;background:#0b1220;border-radius:10px;">
                 </div>
               </a>
             """.formatted(i, i, i, i));
@@ -83,14 +108,17 @@ public final class HtmlReport {
     %s
           </tbody>
         </table>
+        <h2 style="margin-top:18px;">Operaciones (formato infijo)</h2>
+        %s
+        <h2 style="margin-top:18px;">Diagramas de Operaciones</h2>
         %s
       </div>
       <footer>Proyecto 2 · Analizador de Operaciones Aritméticas</footer>
     </body></html>
-    """.formatted(css(), now(), rows.toString(), gal.toString());
+    """.formatted(css(), now(), rows.toString(), infix.toString(), gal.toString());
 
-        Files.createDirectories(destinoHtml.getParent());
-        Files.writeString(destinoHtml, html, StandardCharsets.UTF_8);
+        java.nio.file.Files.createDirectories(destinoHtml.getParent());
+        java.nio.file.Files.writeString(destinoHtml, html, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public static void generarErrores(List<String> erroresLexicos, Path destinoHtml, String equipoId) throws IOException {
