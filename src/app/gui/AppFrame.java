@@ -18,16 +18,13 @@ import lexer.Token;
 import lexer.TokenType;
 
 /**
- * Ventana principal con menús:
- *  Archivo  → Abrir, Guardar, Salir
- *  Acciones → Analizar, Abrir Resultados, Abrir Errores, Abrir Árbol
- *  Ayuda    → Manual de Usuario (PDF), Manual Técnico (PDF), Acerca de
+ * Ventana principal con menús: Archivo → Abrir, Guardar, Salir Acciones →
+ * Analizar, Abrir Resultados, Abrir Errores, Abrir Árbol Ayuda → Manual de
+ * Usuario (PDF), Manual Técnico (PDF), Acerca de
  *
- * Trabaja con el pipeline existente:
- *  - Lexer → tokens/errores
- *  - Analizar → resultados y ASTs
- *  - HtmlReport → Resultados.html / Errores.html
- *  - ArbolGrafico → arbol_#.dot/.png
+ * Trabaja con el pipeline existente: - Lexer → tokens/errores - Analizar →
+ * resultados y ASTs - HtmlReport → Resultados.html / Errores.html -
+ * ArbolGrafico → arbol_#.dot/.png
  */
 public class AppFrame extends JFrame {
 
@@ -127,27 +124,40 @@ public class AppFrame extends JFrame {
     }
 
     // ==================== Acciones ====================
-
     private void accionAbrir() {
-        JFileChooser ch = new JFileChooser();
-        ch.setFileFilter(new FileNameExtensionFilter("Texto (*.txt)", "txt"));
-        if (ch.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            archivoActual = ch.getSelectedFile().toPath();
-            try {
-                editor.setText(Files.readString(archivoActual, StandardCharsets.UTF_8));
-                setTitle("Proyecto 2 · " + archivoActual.getFileName());
-            } catch (IOException ex) {
-                mostrarError("No se pudo abrir: " + ex.getMessage());
-            }
+    try {
+        File defaultDir = new File("resources");            // carpeta por defecto
+        JFileChooser fc = new JFileChooser();
+        if (defaultDir.exists()) fc.setCurrentDirectory(defaultDir);
+
+        fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Texto (*.txt)", "txt"));
+
+        int res = fc.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            Path p = f.toPath();                            // <-- Path para archivoActual
+            String contenido = Files.readString(p, StandardCharsets.UTF_8);
+
+            editor.setText(contenido);                      // <-- usa 'editor', no 'textArea'
+            archivoActual = p;                              // <-- guarda la ruta abierta
+            setTitle("Proyecto 2 · " + f.getName());
         }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this,
+            "Error al abrir el archivo:\n" + ex.getMessage(),
+            "Error", JOptionPane.ERROR_MESSAGE);
     }
+}
+
 
     private void accionGuardar(boolean como) {
         try {
             if (archivoActual == null || como) {
                 JFileChooser ch = new JFileChooser();
                 ch.setFileFilter(new FileNameExtensionFilter("Texto (*.txt)", "txt"));
-                if (ch.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+                if (ch.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+                    return;
+                }
                 archivoActual = ch.getSelectedFile().toPath();
                 if (!archivoActual.toString().toLowerCase().endsWith(".txt")) {
                     archivoActual = Path.of(archivoActual.toString() + ".txt");
@@ -161,69 +171,71 @@ public class AppFrame extends JFrame {
     }
 
     private void accionAnalizar() {
-    try {
-        // 1) Lexer
-        String src = editor.getText();
-        Lexer lx = new Lexer(src);
-        List<String> outTokens = new ArrayList<>();
-        List<String> outErrors = new ArrayList<>();
-        List<Token> tokensParaParser = new ArrayList<>();
+        try {
+            // 1) Lexer
+            String src = editor.getText();
+            Lexer lx = new Lexer(src);
+            List<String> outTokens = new ArrayList<>();
+            List<String> outErrors = new ArrayList<>();
+            List<Token> tokensParaParser = new ArrayList<>();
 
-        Token t;
-        while ((t = lx.next()).type != TokenType.EOF) {
-            if (t.type != TokenType.ERROR) {
-                String s = t.type + "('" + t.lexeme + "')@" + t.line + ":" + t.column;
-                outTokens.add(s);
-                tokensParaParser.add(t);
-            } else {
-                String e = "LEXERROR '" + t.lexeme + "' @ " + t.line + ":" + t.column;
-                outErrors.add(e);
+            Token t;
+            while ((t = lx.next()).type != TokenType.EOF) {
+                if (t.type != TokenType.ERROR) {
+                    String s = t.type + "('" + t.lexeme + "')@" + t.line + ":" + t.column;
+                    outTokens.add(s);
+                    tokensParaParser.add(t);
+                } else {
+                    String e = "LEXERROR '" + t.lexeme + "' @ " + t.line + ":" + t.column;
+                    outErrors.add(e);
+                }
             }
-        }
-        for (Lexer.LexError e : lx.errores) {
-            String s = "LEXERROR '" + e.lexema + "' @ " + e.line + ":" + e.col;
-            if (!outErrors.contains(s)) outErrors.add(s);
-        }
-
-        Files.createDirectories(Path.of("out"));
-        Files.write(Path.of("out", "tokens.txt"), outTokens, StandardCharsets.UTF_8);
-        Files.write(Path.of("out", "errores.txt"), outErrors, StandardCharsets.UTF_8);
-
-        // 2) Parser + AST + resultados (texto)
-        String reporte = Analizar.ejecutar(tokensParaParser);
-        Files.writeString(Path.of("out", "resultados.txt"), reporte, StandardCharsets.UTF_8);
-
-        // 3) Resultados evaluados (lista) y ASTs
-        List<OperacionResultado> resultados = Analizar.analizar(tokensParaParser);
-        var arboles = Analizar.parsearArboles(tokensParaParser);  // <-- SOLO UNA VEZ
-
-        // 4) Árboles .dot/.png
-        for (int i = 0; i < arboles.size(); i++) {
-            Path dot = Path.of("out", "arbol_" + (i + 1) + ".dot");
-            Path png = Path.of("out", "arbol_" + (i + 1) + ".png");
-            ArbolGrafico.generarDot(arboles.get(i), dot);
-            boolean okPng = ArbolGrafico.dotAPng(dot, png);
-            if (!okPng) {
-                System.err.println("Aviso: no se pudo generar PNG (Graphviz).");
+            for (Lexer.LexError e : lx.errores) {
+                String s = "LEXERROR '" + e.lexema + "' @ " + e.line + ":" + e.col;
+                if (!outErrors.contains(s)) {
+                    outErrors.add(s);
+                }
             }
+
+            Files.createDirectories(Path.of("out"));
+            Files.write(Path.of("out", "tokens.txt"), outTokens, StandardCharsets.UTF_8);
+            Files.write(Path.of("out", "errores.txt"), outErrors, StandardCharsets.UTF_8);
+
+            // 2) Parser + AST + resultados (texto)
+            String reporte = Analizar.ejecutar(tokensParaParser);
+            Files.writeString(Path.of("out", "resultados.txt"), reporte, StandardCharsets.UTF_8);
+
+            // 3) Parser + AST + resultados (tolerante)
+            var batch = Analizar.parsearArbolesTolerante(tokensParaParser);
+            List<OperacionResultado> resultados = Analizar.analizarTolerante(tokensParaParser);
+
+            // 4) Árboles .dot/.png solo de los AST válidos
+            for (int i = 0; i < batch.arboles.size(); i++) {
+                Path dot = Path.of("out", "arbol_" + (i + 1) + ".dot");
+                Path png = Path.of("out", "arbol_" + (i + 1) + ".png");
+                ArbolGrafico.generarDot(batch.arboles.get(i), dot);
+                ArbolGrafico.dotAPng(dot, png);
+            }
+
+            // 5) HTML bonito + Errores combinados
+            HtmlReport.generarResultados(resultados, batch.arboles, Path.of("out", "Resultados.html"));
+
+            // COMBINA errores léxicos + sintácticos:
+            List<String> todosLosErrores = new ArrayList<>(outErrors); // léxicos de lexer
+            todosLosErrores.addAll(batch.errores);                     // sintácticos del parser
+            HtmlReport.generarErrores(todosLosErrores, Path.of("out", "ERRORES_Grupo1.html"), "Grupo1");
+
+            JOptionPane.showMessageDialog(this,
+                    "Análisis completado.\nSe generó out/Resultados.html, out/ERRORES_Grupo1.html y arbol_#.png",
+                    "OK", JOptionPane.INFORMATION_MESSAGE);
+
+            abrirEnNavegador(Path.of("out", "Resultados.html"));
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            mostrarError("Fallo el análisis: " + ex.getMessage());
         }
-
-        // 5) HTML bonito (usa AST para la notación infija) + errores
-        HtmlReport.generarResultados(resultados, arboles, Path.of("out", "Resultados.html"));
-        HtmlReport.generarErrores(outErrors, Path.of("out", "ERRORES_Grupo1.html"), "Grupo1");
-
-        JOptionPane.showMessageDialog(this,
-                "Análisis completado.\nSe generó out/Resultados.html, out/ERRORES_Grupo1.html y arbol_#.png",
-                "OK", JOptionPane.INFORMATION_MESSAGE);
-
-        abrirEnNavegador(Path.of("out", "Resultados.html"));
-
-    } catch (Exception ex) {
-        ex.printStackTrace();
-        mostrarError("Fallo el análisis: " + ex.getMessage());
     }
-}
-
 
     private void abrirEnNavegador(Path p) {
         try {
